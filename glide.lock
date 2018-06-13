@@ -1,0 +1,74 @@
+hash: f0e0b786d42f173c7a0c8e876288630e75f6d5c7f53122b4b0328db899dc45ef
+updated: 2018-06-13T15:57:33.356050909-07:00
+imports:
+- name: github.com/apex/log
+  version: ff0f66940b829dc66c81dad34746d4349b83eb9e
+- name: github.com/blang/semver
+  version: b38d23b8782a487059e8fc8773e9a5b228a77cb6
+- name: github.com/cyphar/filepath-securejoin
+  version: ae69057f2299fb9e5ba2df738607e6a505b74ab6
+- name: github.com/docker/go-units
+  version: 47565b4f722fb6ceae66b95f853feed578a4a51c
+- name: github.com/opencontainers/go-digest
+  version: c9281466c8b2f606084ac71339773efd177436e7
+- name: github.com/opencontainers/image-spec
+  version: e562b04403929d582d449ae5386ff79dd7961a11
+  subpackages:
+  - specs-go
+  - specs-go/v1
+- name: github.com/opencontainers/runtime-spec
+  version: 695b81699f3980e8743099451a04cddb5377afdb
+  subpackages:
+  - specs-go
+- name: github.com/opencontainers/runtime-tools
+  version: e29f3ca4eb806a582ee1a1864c7b0563bd64c19b
+  subpackages:
+  - generate
+  - generate/seccomp
+  - validate
+- name: github.com/openSUSE/umoci
+  version: 8aa9c87c6b4ee10f7c9dfafd5dda4cc966544ecc
+  repo: http://github.com/anuvu/umoci
+  subpackages:
+  - mutate
+  - oci/cas
+  - oci/cas/dir
+  - oci/casext
+  - oci/config/convert
+  - oci/config/generate
+  - oci/layer
+  - pkg/fseval
+  - pkg/idtools
+  - pkg/system
+  - pkg/unpriv
+  - third_party/user
+- name: github.com/pkg/errors
+  version: 816c9085562cd7ee03e7f8188a1cfd942858cded
+- name: github.com/sirupsen/logrus
+  version: c155da19408a8799da419ed3eeb0cb5db0ad5dbc
+- name: github.com/syndtr/gocapability
+  version: db04d3cc01c8b54962a58ec7e491717d06cfcc16
+  subpackages:
+  - capability
+- name: github.com/urfave/cli
+  version: 8e01ec4cd3e2d84ab2fe90d8210528ffbb06d8ff
+- name: github.com/vbatts/go-mtree
+  version: 1bcf4de08ff771c9b288e3a25348f195d404c17b
+  subpackages:
+  - pkg/govis
+  - xattr
+- name: golang.org/x/crypto
+  version: 37a17fe027db43f76fd88b056ddf588563fc8722
+  subpackages:
+  - ripemd160
+  - ssh/terminal
+- name: golang.org/x/net
+  version: db08ff08e8622530d9ed3a0e8ac279f6d4c02196
+  subpackages:
+  - context
+- name: golang.org/x/sys
+  version: 8dbc5d05d6edcc104950cc299a1ce6641235bc86
+  subpackages:
+  - unix
+  - windows
+testImports: []
