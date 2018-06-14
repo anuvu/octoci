@@ -40,6 +40,18 @@ var buildCmd = cli.Command{
 	Name:   "build",
 	Usage:  "builds an octoci image",
 	Action: doBuild,
+	Flags:  []cli.Flag{
+		cli.StringFlag{
+			Name:  "oci-dir",
+			Usage: "the output OCI dir to use",
+			Value: "oci",
+		},
+		cli.StringFlag{
+			Name:  "tag",
+			Usage: "the output tag to write",
+			Value: "octoci",
+		},
+	},
 	ArgsUsage: `[base-image] [rootfses]
 
 [base-image] is a skopeo compatible URL for the base image.
@@ -70,13 +82,13 @@ func doBuild(ctx *cli.Context) error {
 		"copy",
 		"--src-tls-verify=false",
 		baseImage,
-		"oci:oci:base",
+		fmt.Sprintf("oci:%s:%s", ctx.String("oci-dir"), ctx.String("tag")),
 	).CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("image import failed: %s: %s", err, string(output))
 	}
 
-	oci, err := umoci.OpenLayout("oci")
+	oci, err := umoci.OpenLayout(ctx.String("oci-dir"))
 	if err != nil {
 		return err
 	}
@@ -99,7 +111,7 @@ func doBuild(ctx *cli.Context) error {
 		return err
 	}
 
-	manifest, err := oci.LookupManifest("base")
+	manifest, err := oci.LookupManifest(ctx.String("tag"))
 	if err != nil {
 		return err
 	}
@@ -130,7 +142,7 @@ func doBuild(ctx *cli.Context) error {
 		return err
 	}
 
-	err = oci.UpdateReference("base", ispec.Descriptor{
+	err = oci.UpdateReference(ctx.String("tag"), ispec.Descriptor{
 		MediaType: ispec.MediaTypeImageManifest,
 		Digest:    digest,
 		Size:      size,
