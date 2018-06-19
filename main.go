@@ -2,7 +2,6 @@ package main
 
 import (
 	"archive/tar"
-	"compress/gzip"
 	"context"
 	"fmt"
 	"io"
@@ -13,6 +12,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/klauspost/pgzip"
 	"github.com/openSUSE/umoci"
 	"github.com/opencontainers/go-digest"
 	ispec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -173,7 +173,7 @@ func (rp *rootfsProcessor) addBlob(ctx context.Context) error {
 	defer reader.Close()
 	defer writer.Close()
 
-	gzw := gzip.NewWriter(writer)
+	gzw := pgzip.NewWriter(writer)
 	defer gzw.Close()
 
 	diffID := digest.SHA256.Digester()

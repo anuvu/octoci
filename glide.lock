@@ -1,5 +1,5 @@
 hash: f0e0b786d42f173c7a0c8e876288630e75f6d5c7f53122b4b0328db899dc45ef
-updated: 2018-06-13T15:57:33.356050909-07:00
+updated: 2018-06-19T15:37:35.740935794-06:00
 imports:
 - name: github.com/apex/log
   version: ff0f66940b829dc66c81dad34746d4349b83eb9e
@@ -9,6 +9,16 @@ imports:
   version: ae69057f2299fb9e5ba2df738607e6a505b74ab6
 - name: github.com/docker/go-units
   version: 47565b4f722fb6ceae66b95f853feed578a4a51c
+- name: github.com/klauspost/compress
+  version: 5fb1f31b0a61e9858f12f39266e059848a5f1cea
+  subpackages:
+  - flate
+- name: github.com/klauspost/cpuid
+  version: e7e905edc00ea8827e58662220139109efea09db
+- name: github.com/klauspost/crc32
+  version: bab58d77464aa9cf4e84200c3276da0831fe0c03
+- name: github.com/klauspost/pgzip
+  version: 90b2c57fba35a1dd05cb40f9200722763808d99b
 - name: github.com/opencontainers/go-digest
   version: c9281466c8b2f606084ac71339773efd177436e7
 - name: github.com/opencontainers/image-spec
@@ -17,7 +27,7 @@ imports:
   - specs-go
   - specs-go/v1
 - name: github.com/opencontainers/runtime-spec
-  version: 695b81699f3980e8743099451a04cddb5377afdb
+  version: 7c4c8f63a63693f75cfa0f3f397151fb8d9732ad
   subpackages:
   - specs-go
 - name: github.com/opencontainers/runtime-tools
@@ -58,7 +68,7 @@ imports:
   - pkg/govis
   - xattr
 - name: golang.org/x/crypto
-  version: 37a17fe027db43f76fd88b056ddf588563fc8722
+  version: 7f39a6fea4fe9364fb61e1def6a268a51b4f3a06
   subpackages:
   - ripemd160
   - ssh/terminal
