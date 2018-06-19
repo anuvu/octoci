@@ -92,6 +92,12 @@ func doBuild(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
+	// Let's GC: if there were any errors and we put some blobs, we don't
+	// want to leave those around. Or, if this was a repeat build and
+	// generated new blobs, we don't want to leave the old ones around
+	// either.
+	defer oci.GC()
+	defer oci.Close()
 
 	tasks := make([]rootfsProcessor, len(rootfses))
 	tp := pool.New(runtime.NumCPU())
