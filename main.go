@@ -16,7 +16,7 @@ import (
 	"github.com/openSUSE/umoci"
 	"github.com/opencontainers/go-digest"
 	ispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/tych0/octoci/pool"
+	"github.com/anuvu/octoci/pool"
 	"github.com/urfave/cli"
 )
 

@@ -1,4 +1,4 @@
-package: github.com/tych0/octoci
+package: github.com/anuvu/octoci
 import:
 - package: github.com/openSUSE/umoci
   repo: http://github.com/anuvu/umoci
