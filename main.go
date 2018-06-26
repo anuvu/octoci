@@ -206,7 +206,7 @@ func (rp *rootfsProcessor) addBlob(ctx context.Context) error {
 				return err
 			}
 
-			hdr.Name = path
+			hdr.Name = path[len(rp.rootfs):]
 			err = tw.WriteHeader(hdr)
 			if err != nil {
 				return err
