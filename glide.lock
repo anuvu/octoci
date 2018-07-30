@@ -1,16 +1,20 @@
-hash: f0e0b786d42f173c7a0c8e876288630e75f6d5c7f53122b4b0328db899dc45ef
-updated: 2018-06-19T15:37:35.740935794-06:00
+hash: e94f1aad4d38da1ca2821f42ea18598fc923238e3661fcf20b1689afeabc750c
+updated: 2018-07-30T14:45:27.85267374-07:00
 imports:
 - name: github.com/apex/log
-  version: ff0f66940b829dc66c81dad34746d4349b83eb9e
+  version: 941dea75d3ebfbdd905a5d8b7b232965c5e5c684
 - name: github.com/blang/semver
   version: b38d23b8782a487059e8fc8773e9a5b228a77cb6
 - name: github.com/cyphar/filepath-securejoin
   version: ae69057f2299fb9e5ba2df738607e6a505b74ab6
 - name: github.com/docker/go-units
   version: 47565b4f722fb6ceae66b95f853feed578a4a51c
+- name: github.com/golang/protobuf
+  version: 11bd559057bb9c65e24d1bd7f436d375323a8565
+  subpackages:
+  - proto
 - name: github.com/klauspost/compress
-  version: 5fb1f31b0a61e9858f12f39266e059848a5f1cea
+  version: b939724e787a27c0005cabe3f78e7ed7987ac74f
   subpackages:
   - flate
 - name: github.com/klauspost/cpuid
@@ -18,7 +22,7 @@ imports:
 - name: github.com/klauspost/crc32
   version: bab58d77464aa9cf4e84200c3276da0831fe0c03
 - name: github.com/klauspost/pgzip
-  version: 90b2c57fba35a1dd05cb40f9200722763808d99b
+  version: c4ad2ed77aece7b3270909769a30a3fcea262a66
 - name: github.com/opencontainers/go-digest
   version: c9281466c8b2f606084ac71339773efd177436e7
 - name: github.com/opencontainers/image-spec
@@ -27,7 +31,7 @@ imports:
   - specs-go
   - specs-go/v1
 - name: github.com/opencontainers/runtime-spec
-  version: 7c4c8f63a63693f75cfa0f3f397151fb8d9732ad
+  version: d810dbc60d8c5aeeb3d054bd1132fab2121968ce
   subpackages:
   - specs-go
 - name: github.com/opencontainers/runtime-tools
@@ -37,10 +41,9 @@ imports:
   - generate/seccomp
   - validate
 - name: github.com/openSUSE/umoci
-  version: 8aa9c87c6b4ee10f7c9dfafd5dda4cc966544ecc
-  repo: http://github.com/anuvu/umoci
+  version: 3de070bc5d593b7a04a8d1f9d571770ec5a07233
+  repo: http://github.com/tych0/umoci
   subpackages:
-  - mutate
   - oci/cas
   - oci/cas/dir
   - oci/casext
@@ -49,13 +52,15 @@ imports:
   - oci/layer
   - pkg/fseval
   - pkg/idtools
+  - pkg/rootlesscontainers-proto
   - pkg/system
   - pkg/unpriv
+  - third_party/shared
   - third_party/user
 - name: github.com/pkg/errors
   version: 816c9085562cd7ee03e7f8188a1cfd942858cded
 - name: github.com/sirupsen/logrus
-  version: c155da19408a8799da419ed3eeb0cb5db0ad5dbc
+  version: 3e01752db0189b9157070a0e1668a620f9a85da2
 - name: github.com/syndtr/gocapability
   version: db04d3cc01c8b54962a58ec7e491717d06cfcc16
   subpackages:
@@ -68,12 +73,12 @@ imports:
   - pkg/govis
   - xattr
 - name: golang.org/x/crypto
-  version: 7f39a6fea4fe9364fb61e1def6a268a51b4f3a06
+  version: c126467f60eb25f8f27e5a981f32a87e3965053f
   subpackages:
   - ripemd160
   - ssh/terminal
 - name: golang.org/x/net
-  version: db08ff08e8622530d9ed3a0e8ac279f6d4c02196
+  version: a0f8a16cb08c06df97cbdf9c47f4731ba548c33c
   subpackages:
   - context
 - name: golang.org/x/sys

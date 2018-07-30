@@ -14,10 +14,12 @@ import (
 
 	"github.com/klauspost/pgzip"
 	"github.com/openSUSE/umoci"
+	"github.com/openSUSE/umoci/oci/casext"
 	"github.com/opencontainers/go-digest"
 	ispec "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/anuvu/octoci/pool"
 	"github.com/urfave/cli"
+	"github.com/pkg/errors"
 )
 
 var (
@@ -96,7 +98,7 @@ func doBuild(ctx *cli.Context) error {
 	// want to leave those around. Or, if this was a repeat build and
 	// generated new blobs, we don't want to leave the old ones around
 	// either.
-	defer oci.GC()
+	defer oci.GC(context.Background())
 	defer oci.Close()
 
 	tasks := make([]rootfsProcessor, len(rootfses))
@@ -117,14 +119,33 @@ func doBuild(ctx *cli.Context) error {
 		return err
 	}
 
-	manifest, err := oci.LookupManifest(ctx.String("tag"))
+	descriptorPaths, err := oci.ResolveReference(context.Background(), ctx.String("tag"))
 	if err != nil {
 		return err
 	}
 
-	config, err := oci.LookupConfig(manifest.Config)
+	if len(descriptorPaths) != 1 {
+		return errors.Errorf("bad tag: %s", ctx.String("tag"))
+	}
+
+	manifestBlob, err := oci.FromDescriptor(context.Background(), descriptorPaths[0].Descriptor())
 	if err != nil {
 		return err
+	}
+
+	manifest, ok := manifestBlob.Data.(ispec.Manifest)
+	if !ok {
+		return errors.Errorf("bad manifest data type %T", manifestBlob.Data)
+	}
+
+	configBlob, err := oci.FromDescriptor(context.Background(), manifest.Config)
+	if err != nil {
+		return err
+	}
+
+	config, ok := configBlob.Data.(ispec.Image)
+	if !ok {
+		return errors.Errorf("bad config data type %T", manifestBlob.Data)
 	}
 
 	for _, task := range tasks {
@@ -132,7 +153,7 @@ func doBuild(ctx *cli.Context) error {
 		manifest.Layers = append(manifest.Layers, task.layerDesc)
 	}
 
-	digest, size, err := oci.PutBlobJSON(config)
+	digest, size, err := oci.PutBlobJSON(context.Background(), config)
 	if err != nil {
 		return err
 	}
@@ -143,12 +164,12 @@ func doBuild(ctx *cli.Context) error {
 		Size:      size,
 	}
 
-	digest, size, err = oci.PutBlobJSON(manifest)
+	digest, size, err = oci.PutBlobJSON(context.Background(), manifest)
 	if err != nil {
 		return err
 	}
 
-	err = oci.UpdateReference(ctx.String("tag"), ispec.Descriptor{
+	err = oci.UpdateReference(context.Background(), ctx.String("tag"), ispec.Descriptor{
 		MediaType: ispec.MediaTypeImageManifest,
 		Digest:    digest,
 		Size:      size,
@@ -161,7 +182,7 @@ func doBuild(ctx *cli.Context) error {
 }
 
 type rootfsProcessor struct {
-	oci       *umoci.Layout
+	oci       casext.Engine
 	rootfs    string
 	diffID    digest.Digest
 	layerDesc ispec.Descriptor
@@ -239,7 +260,7 @@ func (rp *rootfsProcessor) addBlob(ctx context.Context) error {
 		writer.Close()
 	}()
 
-	digest, size, err := rp.oci.PutBlob(reader)
+	digest, size, err := rp.oci.PutBlob(context.Background(), reader)
 	if err != nil {
 		return err
 	}

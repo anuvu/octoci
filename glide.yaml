@@ -1,8 +1,8 @@
 package: github.com/anuvu/octoci
 import:
 - package: github.com/openSUSE/umoci
-  repo: http://github.com/anuvu/umoci
-  version: api-draft
+  repo: http://github.com/tych0/umoci
+  version: api-v2
 - package: github.com/opencontainers/image-spec
   subpackages:
   - specs-go/v1
