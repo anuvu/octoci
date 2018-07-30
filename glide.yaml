@@ -1,14 +1,10 @@
 package: github.com/anuvu/octoci
 import:
 - package: github.com/openSUSE/umoci
-  repo: http://github.com/anuvu/umoci
-  version: api-draft
 - package: github.com/opencontainers/image-spec
   subpackages:
   - specs-go/v1
-  version: e562b04403929d582d449ae5386ff79dd7961a11
 - package: github.com/urfave/cli
 - package: github.com/opencontainers/runtime-tools
   subpackages:
   - generate
-  version: e29f3ca4eb806a582ee1a1864c7b0563bd64c19b
