@@ -54,6 +54,11 @@ var buildCmd = cli.Command{
 			Usage: "the output tag to write",
 			Value: "octoci",
 		},
+		cli.IntFlag{
+			Name:  "dirs-per-blob",
+			Usage: "the number of directories to combine into one layer",
+			Value: 1,
+		},
 	},
 	ArgsUsage: `[base-image] [rootfses]
 
@@ -102,13 +107,18 @@ func doBuild(ctx *cli.Context) error {
 	defer oci.GC(context.Background())
 	defer oci.Close()
 
-	tasks := make([]rootfsProcessor, len(rootfses))
+	tasks := []rootfsProcessor{}
 	tp := pool.New(runtime.NumCPU())
 
 	for i, rootfs := range rootfses {
-		tasks[i].oci = oci
-		tasks[i].rootfs = rootfs
+		if i % ctx.Int("dirs-per-blob") == 0 {
+			tasks = append(tasks, rootfsProcessor{oci: oci, rootfses: []string{}})
+		}
+		tasks[len(tasks)-1].rootfses = append(tasks[len(tasks)-1].rootfses, rootfs)
 
+	}
+
+	for i, _ := range tasks {
 		tp.Add((&tasks[i]).addBlob)
 	}
 
@@ -184,18 +194,18 @@ func doBuild(ctx *cli.Context) error {
 
 type rootfsProcessor struct {
 	oci       casext.Engine
-	rootfs    string
+	rootfses  []string
 	diffID    digest.Digest
 	layerDesc ispec.Descriptor
 }
 
 func (rp *rootfsProcessor) addBlob(ctx context.Context) error {
-	fmt.Println("importing rootfs", rp.rootfs)
 	reader, writer := io.Pipe()
 	defer reader.Close()
 	defer writer.Close()
 
 	gzw := pgzip.NewWriter(writer)
+	gzw.SetConcurrency(250000, 2 * runtime.NumCPU())
 	defer gzw.Close()
 
 	diffID := digest.SHA256.Digester()
@@ -204,58 +214,65 @@ func (rp *rootfsProcessor) addBlob(ctx context.Context) error {
 	defer tw.Close()
 
 	go func() {
-		err := filepath.Walk(rp.rootfs, func(path string, info os.FileInfo, err error) error {
-			select {
-			case <-ctx.Done():
-				return pool.ThreadPoolCancelled
-			default:
-			}
 
-			if err != nil {
-				return err
-			}
-
-			var link string
-			if info.Mode()&os.ModeSymlink != 0 {
-				link, err = os.Readlink(path)
-				if err != nil {
-					return err
+		for _, rootfs := range rp.rootfses {
+			handler := func(path string, info os.FileInfo, err error) error {
+				select {
+				case <-ctx.Done():
+					return pool.ThreadPoolCancelled
+				default:
 				}
-			}
 
-			hdr, err := tar.FileInfoHeader(info, link)
-			if err != nil {
-				return err
-			}
-
-			hdr.Name = path[len(rp.rootfs):]
-			err = tw.WriteHeader(hdr)
-			if err != nil {
-				return err
-			}
-
-			if hdr.Typeflag == tar.TypeReg || hdr.Typeflag == tar.TypeRegA {
-				f, err := os.Open(path)
-				if err != nil {
-					return err
-				}
-				defer f.Close()
-
-				n, err := io.Copy(tw, f)
 				if err != nil {
 					return err
 				}
 
-				if n != hdr.Size {
-					return fmt.Errorf("Huh? bad size for %s", path)
+				var link string
+				if info.Mode()&os.ModeSymlink != 0 {
+					link, err = os.Readlink(path)
+					if err != nil {
+						return err
+					}
 				}
+
+				hdr, err := tar.FileInfoHeader(info, link)
+				if err != nil {
+					return err
+				}
+
+				hdr.Name = path[len(rootfs):]
+				err = tw.WriteHeader(hdr)
+				if err != nil {
+					return err
+				}
+
+				if hdr.Typeflag == tar.TypeReg || hdr.Typeflag == tar.TypeRegA {
+					f, err := os.Open(path)
+					if err != nil {
+						return err
+					}
+					defer f.Close()
+
+					n, err := io.Copy(tw, f)
+					if err != nil {
+						return err
+					}
+
+					if n != hdr.Size {
+						return fmt.Errorf("Huh? bad size for %s", path)
+					}
+				}
+
+				return nil
 			}
 
-			return nil
-		})
-		if err != nil {
-			writer.CloseWithError(err)
+			fmt.Println("importing rootfs", rootfs)
+			err := filepath.Walk(rootfs, handler)
+			if err != nil {
+				writer.CloseWithError(err)
+			}
 		}
+
 		tw.Close()
 		gzw.Close()
 		writer.Close()
