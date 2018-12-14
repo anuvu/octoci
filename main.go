@@ -236,6 +236,11 @@ func (rp *rootfsProcessor) addBlob(ctx context.Context) error {
 					return err
 				}
 
+				/* don't import an empty path */
+				if path == rootfs {
+					return nil
+				}
+
 				var link string
 				if info.Mode()&os.ModeSymlink != 0 {
 					link, err = os.Readlink(path)
