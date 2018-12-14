@@ -59,6 +59,11 @@ var buildCmd = cli.Command{
 			Usage: "the number of directories to combine into one layer",
 			Value: 1,
 		},
+		cli.BoolFlag{
+			Name: "serialize",
+			Usage: "serialize the builds (i.e. don't do them in parallel)",
+			Hidden: true,
+		},
 	},
 	ArgsUsage: `[base-image] [rootfses]
 
@@ -108,7 +113,11 @@ func doBuild(ctx *cli.Context) error {
 	defer oci.Close()
 
 	tasks := []rootfsProcessor{}
-	tp := pool.New(runtime.NumCPU())
+	procs := runtime.NumCPU()
+	if ctx.Bool("serialize") {
+		procs = 1
+	}
+	tp := pool.New(procs)
 
 	for i, rootfs := range rootfses {
 		if i % ctx.Int("dirs-per-blob") == 0 {
