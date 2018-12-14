@@ -12,14 +12,14 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/anuvu/octoci/pool"
 	"github.com/klauspost/pgzip"
 	"github.com/openSUSE/umoci"
 	"github.com/openSUSE/umoci/oci/casext"
 	"github.com/opencontainers/go-digest"
 	ispec "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/anuvu/octoci/pool"
-	"github.com/urfave/cli"
 	"github.com/pkg/errors"
+	"github.com/urfave/cli"
 )
 
 var (
@@ -43,7 +43,7 @@ var buildCmd = cli.Command{
 	Name:   "build",
 	Usage:  "builds an octoci image",
 	Action: doBuild,
-	Flags:  []cli.Flag{
+	Flags: []cli.Flag{
 		cli.StringFlag{
 			Name:  "oci-dir",
 			Usage: "the output OCI dir to use",
@@ -60,8 +60,8 @@ var buildCmd = cli.Command{
 			Value: 1,
 		},
 		cli.BoolFlag{
-			Name: "serialize",
-			Usage: "serialize the builds (i.e. don't do them in parallel)",
+			Name:   "serialize",
+			Usage:  "serialize the builds (i.e. don't do them in parallel)",
 			Hidden: true,
 		},
 	},
@@ -120,7 +120,7 @@ func doBuild(ctx *cli.Context) error {
 	tp := pool.New(procs)
 
 	for i, rootfs := range rootfses {
-		if i % ctx.Int("dirs-per-blob") == 0 {
+		if i%ctx.Int("dirs-per-blob") == 0 {
 			tasks = append(tasks, rootfsProcessor{oci: oci, rootfses: []string{}})
 		}
 		rootfs, err = filepath.Abs(rootfs)
@@ -218,7 +218,7 @@ func (rp *rootfsProcessor) addBlob(ctx context.Context) error {
 	defer writer.Close()
 
 	gzw := pgzip.NewWriter(writer)
-	gzw.SetConcurrency(250000, 2 * runtime.NumCPU())
+	gzw.SetConcurrency(250000, 2*runtime.NumCPU())
 	defer gzw.Close()
 
 	diffID := digest.SHA256.Digester()

@@ -9,11 +9,11 @@ import (
 var ThreadPoolCancelled = fmt.Errorf("thread pool cancelled")
 
 type ThreadPool struct {
-	ctx     context.Context
-	cancel  context.CancelFunc
-	n       int
-	tasks chan func(context.Context) error
-	err     error
+	ctx    context.Context
+	cancel context.CancelFunc
+	n      int
+	tasks  chan func(context.Context) error
+	err    error
 }
 
 func New(n int) *ThreadPool {
