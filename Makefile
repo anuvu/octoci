@@ -5,6 +5,11 @@ COMMIT=$(if $(shell git status --porcelain --untracked-files=no),$(COMMIT_HASH)-
 default: vendor $(GO_SRC)
 	go build -ldflags "-X main.version=$(COMMIT)" -o octoci github.com/anuvu/octoci
 
+.PHONY: check
+check:
+	go fmt ./... && ([ -z $(TRAVIS) ] || git diff --quiet)
+	cd test/ && sudo ./main.sh
+
 vendor: glide.lock
 	glide install --strip-vendor
 
