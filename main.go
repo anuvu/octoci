@@ -123,6 +123,10 @@ func doBuild(ctx *cli.Context) error {
 		if i % ctx.Int("dirs-per-blob") == 0 {
 			tasks = append(tasks, rootfsProcessor{oci: oci, rootfses: []string{}})
 		}
+		rootfs, err = filepath.Abs(rootfs)
+		if err != nil {
+			return err
+		}
 		tasks[len(tasks)-1].rootfses = append(tasks[len(tasks)-1].rootfses, rootfs)
 
 	}
