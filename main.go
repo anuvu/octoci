@@ -64,6 +64,10 @@ var buildCmd = cli.Command{
 			Usage:  "serialize the builds (i.e. don't do them in parallel)",
 			Hidden: true,
 		},
+		cli.Uint64Flag{
+			Name:  "max-layer-size",
+			Usage: "don't build layers bigger than size N (bytes)",
+		},
 	},
 	ArgsUsage: `[base-image] [rootfses]
 
@@ -121,14 +125,17 @@ func doBuild(ctx *cli.Context) error {
 
 	for i, rootfs := range rootfses {
 		if i%ctx.Int("dirs-per-blob") == 0 {
-			tasks = append(tasks, rootfsProcessor{oci: oci, rootfses: []string{}})
+			tasks = append(tasks, rootfsProcessor{
+				oci:          oci,
+				rootfses:     []string{},
+				maxLayerSize: ctx.Uint64("max-layer-size"),
+			})
 		}
 		rootfs, err = filepath.Abs(rootfs)
 		if err != nil {
 			return err
 		}
 		tasks[len(tasks)-1].rootfses = append(tasks[len(tasks)-1].rootfses, rootfs)
-
 	}
 
 	for i, _ := range tasks {
@@ -173,8 +180,8 @@ func doBuild(ctx *cli.Context) error {
 	}
 
 	for _, task := range tasks {
-		config.RootFS.DiffIDs = append(config.RootFS.DiffIDs, task.diffID)
-		manifest.Layers = append(manifest.Layers, task.layerDesc)
+		config.RootFS.DiffIDs = append(config.RootFS.DiffIDs, task.diffID...)
+		manifest.Layers = append(manifest.Layers, task.layerDesc...)
 	}
 
 	digest, size, err := oci.PutBlobJSON(context.Background(), config)
@@ -205,28 +212,56 @@ func doBuild(ctx *cli.Context) error {
 	return nil
 }
 
+type writeCounter struct {
+	written uint64
+}
+
+func (wc *writeCounter) Write(p []byte) (n int, err error) {
+	n = len(p)
+	wc.written += uint64(n)
+	return n, nil
+}
+
 type rootfsProcessor struct {
-	oci       casext.Engine
-	rootfses  []string
-	diffID    digest.Digest
-	layerDesc ispec.Descriptor
+	oci          casext.Engine
+	maxLayerSize uint64
+	rootfses     []string
+	diffID       []digest.Digest
+	layerDesc    []ispec.Descriptor
 }
 
 func (rp *rootfsProcessor) addBlob(ctx context.Context) error {
-	reader, writer := io.Pipe()
-	defer reader.Close()
-	defer writer.Close()
-
-	gzw := pgzip.NewWriter(writer)
-	gzw.SetConcurrency(250000, 2*runtime.NumCPU())
-	defer gzw.Close()
-
-	diffID := digest.SHA256.Digester()
-
-	tw := tar.NewWriter(io.MultiWriter(gzw, diffID.Hash()))
-	defer tw.Close()
+	ch := make(chan struct {
+		Reader io.ReadCloser
+		DiffID digest.Digester
+	}, 1)
 
 	go func() {
+		reader, writer := io.Pipe()
+		defer writer.Close()
+		compressedCounter := &writeCounter{}
+		bothCompressed := io.MultiWriter(compressedCounter, writer)
+
+		gzw := pgzip.NewWriter(bothCompressed)
+		gzw.SetConcurrency(250000, 2*runtime.NumCPU())
+		defer gzw.Close()
+
+		diffID := digest.SHA256.Digester()
+		ch <- struct {
+			Reader io.ReadCloser
+			DiffID digest.Digester
+		}{
+			reader,
+			diffID,
+		}
+		defer func() {
+			close(ch)
+		}()
+
+		uncompressedCounter := &writeCounter{}
+
+		tw := tar.NewWriter(io.MultiWriter(uncompressedCounter, gzw, diffID.Hash()))
+		defer tw.Close()
 
 		for _, rootfs := range rp.rootfses {
 			handler := func(path string, info os.FileInfo, err error) error {
@@ -256,6 +291,47 @@ func (rp *rootfsProcessor) addBlob(ctx context.Context) error {
 				hdr, err := tar.FileInfoHeader(info, link)
 				if err != nil {
 					return err
+				}
+
+				if rp.maxLayerSize > 0 && uncompressedCounter.written > 0 {
+					// Let's use a bad heuristic: assume
+					// our compression ratio will be
+					// relatively constant, let's not add
+					// this file to the archive if it'll
+					// get us within 5% of the max layer
+					// size. We'll waste some space, but
+					// c'est la vie. However, if we're
+					// going to try this heuristic, we need
+					// to make sure the data is all written
+					// first, so let's do a flush.
+					if err := gzw.Flush(); err != nil {
+						return err
+					}
+					ratio := float64(compressedCounter.written) / float64(uncompressedCounter.written)
+					if float64(compressedCounter.written)+ratio*(1000+float64(info.Size())) > float64(rp.maxLayerSize)-float64(rp.maxLayerSize)*0.05 {
+
+						tw.Close()
+						gzw.Close()
+						writer.Close()
+						reader, writer = io.Pipe()
+						uncompressedCounter.written = 0
+						compressedCounter.written = 0
+
+						bothCompressed = io.MultiWriter(compressedCounter, writer)
+
+						gzw = pgzip.NewWriter(bothCompressed)
+						gzw.SetConcurrency(250000, 2*runtime.NumCPU())
+
+						diffID = digest.SHA256.Digester()
+						tw = tar.NewWriter(io.MultiWriter(uncompressedCounter, gzw, diffID.Hash()))
+						ch <- struct {
+							Reader io.ReadCloser
+							DiffID digest.Digester
+						}{
+							reader,
+							diffID,
+						}
+					}
 				}
 
 				hdr.Name = path[len(rootfs):]
@@ -296,17 +372,28 @@ func (rp *rootfsProcessor) addBlob(ctx context.Context) error {
 		writer.Close()
 	}()
 
-	digest, size, err := rp.oci.PutBlob(context.Background(), reader)
-	if err != nil {
-		return err
-	}
+	for {
+		layer, ok := <-ch
+		if !ok {
+			break
+		}
 
-	rp.layerDesc = ispec.Descriptor{
-		MediaType: ispec.MediaTypeImageLayerGzip,
-		Size:      size,
-		Digest:    digest,
+		reader := layer.Reader
+		diffID := layer.DiffID
+
+		digest, size, err := rp.oci.PutBlob(context.Background(), reader)
+		reader.Close()
+		if err != nil {
+			return err
+		}
+
+		rp.layerDesc = append(rp.layerDesc, ispec.Descriptor{
+			MediaType: ispec.MediaTypeImageLayerGzip,
+			Size:      size,
+			Digest:    digest,
+		})
+		rp.diffID = append(rp.diffID, diffID.Digest())
 	}
-	rp.diffID = diffID.Digest()
 
 	return nil
 }
